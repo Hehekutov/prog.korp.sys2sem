@@ -1,21 +1,21 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-public class Book
+namespace LibraryApp
 {
-    public int Id { get; set; }
+    public class Book
+    {
+        public int Id { get; set; }
+        public string Title { get; set; } = string.Empty;
 
-    public string Title { get; set; }
+        public int AuthorId { get; set; }
+        public Author? Author { get; set; }
 
-    public int PublishYear { get; set; }
+        public int? GenreId { get; set; }
+        public Genre? Genre { get; set; }
 
-    public string ISBN { get; set; }
-
-    public int QuantityInStock { get; set; }
-
-    // Связи
-    public int AuthorId { get; set; }
-    public Author Author { get; set; }
-
-    public int GenreId { get; set; }
-    public Genre Genre { get; set; }
+        // Дополнительные поля, используемые в UI
+        public int? PublishYear { get; set; }
+        public string ISBN { get; set; } = string.Empty;
+        public int QuantityInStock { get; set; }
+    }
 }

@@ -1,0 +1,105 @@
+﻿using System;
+using System.Linq;
+using System.Windows;
+
+namespace LibraryApp
+{
+    public partial class BookWindow : Window
+    {
+        private readonly LibraryContext _context;
+        private readonly Book? _editingBook;
+
+        public BookWindow(LibraryContext context, Book? book = null)
+        {
+            InitializeComponent();
+            _context = context;
+            _editingBook = book;
+
+            AuthorBox.ItemsSource = _context.Authors.AsNoTracking().ToList();
+            GenreBox.ItemsSource = _context.Genres.AsNoTracking().ToList();
+
+            if (_editingBook != null)
+            {
+                TitleBox.Text = _editingBook.Title;
+                YearBox.Text = _editingBook.PublishYear?.ToString() ?? string.Empty;
+                IsbnBox.Text = _editingBook.ISBN;
+                QuantityBox.Text = _editingBook.QuantityInStock.ToString();
+
+                // выбрать автора и жанр в списках
+                if (_editingBook.AuthorId != 0)
+                {
+                    var author = _context.Authors.AsNoTracking().FirstOrDefault(a => a.Id == _editingBook.AuthorId);
+                    AuthorBox.SelectedItem = author;
+                }
+
+                if (_editingBook.GenreId.HasValue)
+                {
+                    var genre = _context.Genres.AsNoTracking().FirstOrDefault(g => g.Id == _editingBook.GenreId.Value);
+                    GenreBox.SelectedItem = genre;
+                }
+            }
+
+            OkButton.Click += OkButton_Click;
+        }
+
+        private void OkButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(TitleBox.Text))
+            {
+                MessageBox.Show("Введите название книги.");
+                return;
+            }
+
+            if (AuthorBox.SelectedItem is not Author selectedAuthor)
+            {
+                MessageBox.Show("Выберите автора.");
+                return;
+            }
+
+            int? year = null;
+            if (!string.IsNullOrWhiteSpace(YearBox.Text) && int.TryParse(YearBox.Text, out var y))
+                year = y;
+
+            int quantity = 0;
+            if (!string.IsNullOrWhiteSpace(QuantityBox.Text) && int.TryParse(QuantityBox.Text, out var q))
+                quantity = q;
+
+            if (_editingBook != null)
+            {
+                // обновляем отслеживаемую сущность
+                _editingBook.Title = TitleBox.Text.Trim();
+                _editingBook.AuthorId = selectedAuthor.Id;
+                _editingBook.GenreId = (GenreBox.SelectedItem as Genre)?.Id;
+                _editingBook.PublishYear = year;
+                _editingBook.ISBN = IsbnBox.Text.Trim();
+                _editingBook.QuantityInStock = quantity;
+            }
+            else
+            {
+                var book = new Book
+                {
+                    Title = TitleBox.Text.Trim(),
+                    AuthorId = selectedAuthor.Id,
+                    GenreId = (GenreBox.SelectedItem as Genre)?.Id,
+                    PublishYear = year,
+                    ISBN = IsbnBox.Text.Trim(),
+                    QuantityInStock = quantity
+                };
+
+                _context.Books.Add(book);
+            }
+
+            try
+            {
+                _context.SaveChanges();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при сохранении: {ex.Message}");
+                return;
+            }
+
+            DialogResult = true;
+        }
+    }
+}
