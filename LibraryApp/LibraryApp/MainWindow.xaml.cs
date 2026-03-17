@@ -13,39 +13,29 @@ namespace LibraryApp
             InitializeComponent();
 
             _context = new LibraryContext();
-
-            // Надёжная подготовка БД: если модель и схема рассинхронизированы,
-            // контекст пересоздаст базу и заполнит тестовыми данными.
             _context.EnsureDatabaseCompatibility();
 
-            LoadFilters();
             LoadBooks();
 
-            // Подписки на события
             SearchBox.TextChanged += (s, e) => ApplyFilters();
-            AuthorFilter.SelectionChanged += (s, e) => ApplyFilters();
-            GenreFilter.SelectionChanged += (s, e) => ApplyFilters();
 
             AddButton.Click += AddButton_Click;
             EditButton.Click += EditButton_Click;
             DeleteButton.Click += DeleteButton_Click;
-        }
-
-        private void LoadFilters()
-        {
-            AuthorFilter.ItemsSource = _context.Authors.AsNoTracking().ToList();
-            AuthorFilter.SelectedIndex = -1;
-
-            GenreFilter.ItemsSource = _context.Genres.AsNoTracking().ToList();
-            GenreFilter.SelectedIndex = -1;
+            AddAuthorButton.Click += AddAuthorButton_Click;
+            AddGenreButton.Click += AddGenreButton_Click;
         }
 
         private void LoadBooks()
         {
             var books = _context.Books
-                .Include(b => b.Author)
-                .Include(b => b.Genre)
+                .Include(b => b.BookAuthors)
+                .ThenInclude(ba => ba.Author)
+                .Include(b => b.BookGenres)
+                .ThenInclude(bg => bg.Genre)
                 .AsNoTracking()
+                .ToList()
+                .Select(BookViewModel.FromBook)
                 .ToList();
 
             BooksGrid.ItemsSource = books;
@@ -54,59 +44,38 @@ namespace LibraryApp
         private void ApplyFilters()
         {
             var query = _context.Books
-                .Include(b => b.Author)
-                .Include(b => b.Genre)
+                .Include(b => b.BookAuthors)
+                .ThenInclude(ba => ba.Author)
+                .Include(b => b.BookGenres)
+                .ThenInclude(bg => bg.Genre)
                 .AsQueryable();
 
-            // Поиск по названию
             if (!string.IsNullOrWhiteSpace(SearchBox.Text))
             {
-                query = query.Where(b =>
-                    b.Title.Contains(SearchBox.Text));
-            }
-
-            // Фильтр по автору
-            if (AuthorFilter.SelectedItem is Author selectedAuthor)
-            {
-                query = query.Where(b =>
-                    b.AuthorId == selectedAuthor.Id);
-            }
-
-            // Фильтр по жанру
-            if (GenreFilter.SelectedItem is Genre selectedGenre)
-            {
-                query = query.Where(b =>
-                    b.GenreId == selectedGenre.Id);
+                query = query.Where(b => b.Title.Contains(SearchBox.Text));
             }
 
             BooksGrid.ItemsSource = query
                 .AsNoTracking()
+                .ToList()
+                .Select(BookViewModel.FromBook)
                 .ToList();
         }
 
         private void DeleteButton_Click(object sender, RoutedEventArgs e)
         {
-            if (BooksGrid.SelectedItem is Book selectedBook)
+            if (BooksGrid.SelectedItem is BookViewModel selectedBook)
             {
-                var result = MessageBox.Show(
-                    "Удалить выбранную книгу?",
-                    "Подтверждение",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Warning);
+                var result = MessageBox.Show("Удалить выбранную книгу?", "Подтверждение", MessageBoxButton.YesNo, MessageBoxImage.Warning);
 
                 if (result == MessageBoxResult.Yes)
                 {
-                    // Получаем отслеживаемую сущность по Id и удаляем её
                     var book = _context.Books.Find(selectedBook.Id);
                     if (book != null)
                     {
                         _context.Books.Remove(book);
                         _context.SaveChanges();
                         ApplyFilters();
-                    }
-                    else
-                    {
-                        MessageBox.Show("Не удалось найти книгу в контексте для удаления.");
                     }
                 }
             }
@@ -122,39 +91,74 @@ namespace LibraryApp
             win.Owner = this;
             if (win.ShowDialog() == true)
             {
-                // Сохранение уже выполнено в диалоге; просто обновляем список
                 ApplyFilters();
             }
         }
 
         private void EditButton_Click(object? sender, RoutedEventArgs e)
         {
-            if (BooksGrid.SelectedItem is Book selectedBook)
+            if (BooksGrid.SelectedItem is BookViewModel selectedBook)
             {
-                // Получаем отслеживаемую сущность из контекста
                 var book = _context.Books
-                    .Include(b => b.Author)
-                    .Include(b => b.Genre)
+                    .Include(b => b.BookAuthors)
+                    .ThenInclude(ba => ba.Author)
+                    .Include(b => b.BookGenres)
+                    .ThenInclude(bg => bg.Genre)
                     .FirstOrDefault(b => b.Id == selectedBook.Id);
 
-                if (book == null)
+                if (book != null)
                 {
-                    MessageBox.Show("Не удалось найти книгу в контексте для редактирования.");
-                    return;
-                }
-
-                var win = new BookWindow(_context, book);
-                win.Owner = this;
-                if (win.ShowDialog() == true)
-                {
-                    // Изменения уже сохранены в диалоге
-                    ApplyFilters();
+                    var win = new BookWindow(_context, book);
+                    win.Owner = this;
+                    if (win.ShowDialog() == true)
+                    {
+                        ApplyFilters();
+                    }
                 }
             }
             else
             {
                 MessageBox.Show("Выберите книгу для редактирования.");
             }
+        }
+
+        private void AddAuthorButton_Click(object? sender, RoutedEventArgs e)
+        {
+            var win = new AuthorWindow(_context);
+            win.Owner = this;
+            win.ShowDialog();
+        }
+
+        private void AddGenreButton_Click(object? sender, RoutedEventArgs e)
+        {
+            var win = new GenreWindow(_context);
+            win.Owner = this;
+            win.ShowDialog();
+        }
+    }
+
+    public class BookViewModel
+    {
+        public int Id { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public int? PublishYear { get; set; }
+        public string ISBN { get; set; } = string.Empty;
+        public int QuantityInStock { get; set; }
+        public string AuthorsDisplay { get; set; } = string.Empty;
+        public string GenresDisplay { get; set; } = string.Empty;
+
+        public static BookViewModel FromBook(Book book)
+        {
+            return new BookViewModel
+            {
+                Id = book.Id,
+                Title = book.Title,
+                PublishYear = book.PublishYear,
+                ISBN = book.ISBN,
+                QuantityInStock = book.QuantityInStock,
+                AuthorsDisplay = string.Join(", ", book.BookAuthors.Select(ba => ba.Author?.ToString() ?? "Неизвестен")),
+                GenresDisplay = string.Join(", ", book.BookGenres.Select(bg => bg.Genre?.Name ?? "Неизвестен"))
+            };
         }
     }
 }

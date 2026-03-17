@@ -8,11 +8,11 @@ namespace LibraryApp
         public int Id { get; set; }
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
-        public DateTime? BirthDate { get; set; }
+        public DateTime BirthDate { get; set; }
         public string Country { get; set; } = string.Empty;
 
-        public ICollection<Book> Books { get; set; } = new List<Book>();
+        public ICollection<BookAuthor> BookAuthors { get; set; } = new List<BookAuthor>();
 
-        public override string ToString() => $"{FirstName} {LastName}";
+        public override string ToString() => $"{FirstName} {LastName}".Trim();
     }
 }

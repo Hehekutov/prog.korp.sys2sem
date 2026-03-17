@@ -2,7 +2,7 @@
 using System.Data;
 using System.Windows;
 
-namespace LibraryApp
+namespace NetworkAnalyzer
 {
     /// <summary>
     /// Interaction logic for App.xaml

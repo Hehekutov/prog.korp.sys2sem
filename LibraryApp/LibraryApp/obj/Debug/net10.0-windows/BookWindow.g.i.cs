@@ -116,7 +116,7 @@ namespace LibraryApp {
                 return;
             }
             _contentLoaded = true;
-            System.Uri resourceLocater = new System.Uri("/LibraryApp;component/bookwindow.xaml", System.UriKind.Relative);
+            System.Uri resourceLocater = new System.Uri("/LibraryApp;V1.0.0.0;component/bookwindow.xaml", System.UriKind.Relative);
             
             #line 1 "..\..\..\BookWindow.xaml"
             System.Windows.Application.LoadComponent(this, resourceLocater);
