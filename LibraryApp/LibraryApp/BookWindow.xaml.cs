@@ -1,106 +1,153 @@
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Linq;
 using System.Windows;
-using Microsoft.EntityFrameworkCore;
 
 namespace LibraryApp
 {
     public partial class BookWindow : Window
     {
         private readonly LibraryContext _context;
-        private readonly Book? _editingBook;
+        private readonly Book? _editing;
 
-        public BookWindow(LibraryContext context, Book? book = null)
+        public BookWindow(LibraryContext context, Book? editing = null)
         {
             InitializeComponent();
             _context = context;
-            _editingBook = book;
+            _editing = editing;
 
-            AuthorBox.ItemsSource = _context.Authors.AsNoTracking().ToList();
-            GenreBox.ItemsSource = _context.Genres.AsNoTracking().ToList();
+            LoadAuthorsAndGenres();
 
-            if (_editingBook != null)
+            if (_editing != null)
             {
-                TitleBox.Text = _editingBook.Title;
-                YearBox.Text = _editingBook.PublishYear?.ToString() ?? string.Empty;
-                IsbnBox.Text = _editingBook.ISBN;
-                QuantityBox.Text = _editingBook.QuantityInStock.ToString();
+                TitleBox.Text = _editing.Title;
+                YearBox.Text = _editing.PublishYear?.ToString() ?? string.Empty;
+                ISBNBox.Text = _editing.ISBN;
+                QuantityBox.Text = _editing.QuantityInStock.ToString();
+                Title = "Редактировать книгу";
 
-                // выбрать автора и жанр в списках
-                if (_editingBook.AuthorId != 0)
+                var selectedAuthorIds = _editing.BookAuthors.Select(ba => ba.AuthorId).ToList();
+                var selectedGenreIds = _editing.BookGenres.Select(bg => bg.GenreId).ToList();
+
+                foreach (var item in AuthorsList.Items)
                 {
-                    var author = _context.Authors.AsNoTracking().FirstOrDefault(a => a.Id == _editingBook.AuthorId);
-                    AuthorBox.SelectedItem = author;
+                    if (item is AuthorDisplay author && selectedAuthorIds.Contains(author.Id))
+                    {
+                        AuthorsList.SelectedItems.Add(item);
+                    }
                 }
 
-                if (_editingBook.GenreId.HasValue)
+                foreach (var item in GenresList.Items)
                 {
-                    var genre = _context.Genres.AsNoTracking().FirstOrDefault(g => g.Id == _editingBook.GenreId.Value);
-                    GenreBox.SelectedItem = genre;
+                    if (item is Genre genre && selectedGenreIds.Contains(genre.Id))
+                    {
+                        GenresList.SelectedItems.Add(item);
+                    }
                 }
             }
+            else
+            {
+                Title = "Добавить книгу";
+                QuantityBox.Text = "1";
+            }
 
-            OkButton.Click += OkButton_Click;
+            SaveButton.Click += SaveButton_Click;
+            CancelButton.Click += (s, e) => Close();
         }
 
-        private void OkButton_Click(object sender, RoutedEventArgs e)
+        private void LoadAuthorsAndGenres()
         {
-            if (string.IsNullOrWhiteSpace(TitleBox.Text))
+            var authors = _context.Authors
+                .AsNoTracking()
+                .Select(a => new AuthorDisplay { Id = a.Id, Display = a.ToString() })
+                .ToList();
+
+            var genres = _context.Genres.AsNoTracking().ToList();
+
+            AuthorsList.ItemsSource = authors;
+            GenresList.ItemsSource = genres;
+        }
+
+        private void SaveButton_Click(object sender, RoutedEventArgs e)
+        {
+            var title = TitleBox.Text?.Trim();
+            if (string.IsNullOrWhiteSpace(title))
             {
                 MessageBox.Show("Введите название книги.");
                 return;
             }
 
-            if (AuthorBox.SelectedItem is not Author selectedAuthor)
+            if (AuthorsList.SelectedItems.Count == 0)
             {
-                MessageBox.Show("Выберите автора.");
+                MessageBox.Show("Выберите хотя бы одного автора.");
                 return;
             }
 
-            int? year = null;
-            if (!string.IsNullOrWhiteSpace(YearBox.Text) && int.TryParse(YearBox.Text, out var y))
-                year = y;
-
-            int quantity = 0;
-            if (!string.IsNullOrWhiteSpace(QuantityBox.Text) && int.TryParse(QuantityBox.Text, out var q))
-                quantity = q;
-
-            if (_editingBook != null)
+            if (GenresList.SelectedItems.Count == 0)
             {
-                // обновляем отслеживаемую сущность
-                _editingBook.Title = TitleBox.Text.Trim();
-                _editingBook.AuthorId = selectedAuthor.Id;
-                _editingBook.GenreId = (GenreBox.SelectedItem as Genre)?.Id;
-                _editingBook.PublishYear = year;
-                _editingBook.ISBN = IsbnBox.Text.Trim();
-                _editingBook.QuantityInStock = quantity;
+                MessageBox.Show("Выберите хотя бы один жанр.");
+                return;
+            }
+
+            if (!int.TryParse(QuantityBox.Text, out int quantity))
+            {
+                MessageBox.Show("Количество должно быть числом.");
+                return;
+            }
+
+            if (_editing != null)
+            {
+                _editing.Title = title;
+                _editing.ISBN = ISBNBox.Text?.Trim() ?? string.Empty;
+                _editing.PublishYear = int.TryParse(YearBox.Text, out int year) ? year : null;
+                _editing.QuantityInStock = quantity;
+
+                _context.BookAuthors.RemoveRange(_context.BookAuthors.Where(ba => ba.BookId == _editing.Id));
+                _context.BookGenres.RemoveRange(_context.BookGenres.Where(bg => bg.BookId == _editing.Id));
+
+                foreach (var selectedAuthor in AuthorsList.SelectedItems.Cast<AuthorDisplay>())
+                {
+                    _context.BookAuthors.Add(new BookAuthor { BookId = _editing.Id, AuthorId = selectedAuthor.Id });
+                }
+
+                foreach (var selectedGenre in GenresList.SelectedItems.Cast<Genre>())
+                {
+                    _context.BookGenres.Add(new BookGenre { BookId = _editing.Id, GenreId = selectedGenre.Id });
+                }
             }
             else
             {
                 var book = new Book
                 {
-                    Title = TitleBox.Text.Trim(),
-                    AuthorId = selectedAuthor.Id,
-                    GenreId = (GenreBox.SelectedItem as Genre)?.Id,
-                    PublishYear = year,
-                    ISBN = IsbnBox.Text.Trim(),
+                    Title = title,
+                    ISBN = ISBNBox.Text?.Trim() ?? string.Empty,
+                    PublishYear = int.TryParse(YearBox.Text, out int year) ? year : null,
                     QuantityInStock = quantity
                 };
 
                 _context.Books.Add(book);
-            }
-
-            try
-            {
                 _context.SaveChanges();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Ошибка при сохранении: {ex.Message}");
-                return;
+
+                foreach (var selectedAuthor in AuthorsList.SelectedItems.Cast<AuthorDisplay>())
+                {
+                    _context.BookAuthors.Add(new BookAuthor { BookId = book.Id, AuthorId = selectedAuthor.Id });
+                }
+
+                foreach (var selectedGenre in GenresList.SelectedItems.Cast<Genre>())
+                {
+                    _context.BookGenres.Add(new BookGenre { BookId = book.Id, GenreId = selectedGenre.Id });
+                }
             }
 
+            _context.SaveChanges();
             DialogResult = true;
+            Close();
         }
+    }
+
+    public class AuthorDisplay
+    {
+        public int Id { get; set; }
+        public string Display { get; set; } = string.Empty;
     }
 }

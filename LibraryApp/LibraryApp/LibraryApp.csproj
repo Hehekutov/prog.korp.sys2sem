@@ -1,4 +1,67 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿csharp LibraryApp/Models/Book.cs
+using System.Collections.Generic;
+
+namespace LibraryApp
+{
+    public class Book
+    {
+        public int Id { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public int? PublishYear { get; set; }
+        public string ISBN { get; set; } = string.Empty;
+        public int QuantityInStock { get; set; }
+
+        // Many-to-Many связи
+        public ICollection<BookAuthor> BookAuthors { get; set; } = new List<BookAuthor>();
+        public ICollection<BookGenre> BookGenres { get; set; } = new List<BookGenre>();
+    }
+}csharp LibraryApp/AuthorWindow.xaml.cs
+using System;
+using System.Windows;
+
+namespace LibraryApp
+{
+    public partial class AuthorWindow : Window
+    {
+        private readonly LibraryContext _context;
+
+        public AuthorWindow(LibraryContext context)
+        {
+            InitializeComponent();
+            _context = context;
+
+            BirthDatePicker.SelectedDate = DateTime.Now.AddYears(-30);
+
+            SaveButton.Click += (s, e) => SaveAuthor();
+            CancelButton.Click += (s, e) => Close();
+        }
+
+        private void SaveAuthor()
+        {
+            var first = FirstNameBox.Text?.Trim();
+            var last = LastNameBox.Text?.Trim();
+
+            if (string.IsNullOrWhiteSpace(first) && string.IsNullOrWhiteSpace(last))
+            {
+                MessageBox.Show("Введите имя или фамилию.");
+                return;
+            }
+
+            var author = new Author
+            {
+                FirstName = first ?? string.Empty,
+                LastName = last ?? string.Empty,
+                BirthDate = BirthDatePicker.SelectedDate ?? DateTime.MinValue,
+                Country = CountryBox.Text?.Trim() ?? string.Empty
+            };
+
+            _context.Authors.Add(author);
+            _context.SaveChanges();
+            MessageBox.Show("Автор добавлен успешно.");
+            Close();
+        }
+    }
+}<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -7,6 +70,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Page Remove="AuthorWindow.xaml" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.3" />
