@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("NetworkAnalyzer")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ecb1ee9e0af5467597248bbbbc84d71243188888")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c2997ab6d312e685029eb7c1f55e1831569db667")]
 [assembly: System.Reflection.AssemblyProductAttribute("NetworkAnalyzer")]
 [assembly: System.Reflection.AssemblyTitleAttribute("NetworkAnalyzer")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

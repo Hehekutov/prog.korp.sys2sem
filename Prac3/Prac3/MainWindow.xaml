@@ -1,0 +1,262 @@
+﻿<Window x:Class="Prac3.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Prac3"
+        mc:Ignorable="d"
+        Title="HTTP Monitor Dashboard"
+        Height="900"
+        Width="1440"
+        MinHeight="760"
+        MinWidth="1180"
+        Background="#FFF5F7FA">
+    <Window.Resources>
+        <Style TargetType="GroupBox">
+            <Setter Property="Margin" Value="0,0,0,16" />
+            <Setter Property="Padding" Value="12" />
+            <Setter Property="BorderBrush" Value="#FFD6DEE8" />
+            <Setter Property="Background" Value="White" />
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="Margin" Value="0,4,0,12" />
+            <Setter Property="Padding" Value="8" />
+        </Style>
+        <Style TargetType="ComboBox">
+            <Setter Property="Margin" Value="0,4,0,12" />
+            <Setter Property="Padding" Value="6" />
+        </Style>
+        <Style TargetType="Button">
+            <Setter Property="Margin" Value="0,4,8,12" />
+            <Setter Property="Padding" Value="14,8" />
+            <Setter Property="Background" Value="#FF146C94" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderBrush" Value="#FF146C94" />
+        </Style>
+        <Style TargetType="DataGrid">
+            <Setter Property="Margin" Value="0,8,0,0" />
+            <Setter Property="AutoGenerateColumns" Value="False" />
+            <Setter Property="CanUserAddRows" Value="False" />
+            <Setter Property="CanUserDeleteRows" Value="False" />
+            <Setter Property="IsReadOnly" Value="True" />
+        </Style>
+    </Window.Resources>
+
+    <DockPanel Margin="18">
+        <Border DockPanel.Dock="Top"
+                Padding="18"
+                Margin="0,0,0,18"
+                Background="#FF12344D"
+                CornerRadius="14">
+            <StackPanel>
+                <TextBlock FontSize="28"
+                           FontWeight="SemiBold"
+                           Foreground="White"
+                           Text="Система мониторинга HTTP-запросов" />
+                <TextBlock Margin="0,8,0,0"
+                           Foreground="#FFD7E6F2"
+                           Text="WPF-приложение с HTTP-сервером, клиентом, логированием, статистикой и мониторингом нагрузки." />
+            </StackPanel>
+        </Border>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="420" />
+                    <ColumnDefinition Width="18" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <GroupBox Header="Управление сервером">
+                        <StackPanel>
+                            <TextBlock Text="Порт сервера" />
+                            <TextBox Text="{Binding ServerPort, UpdateSourceTrigger=PropertyChanged}" />
+
+                            <StackPanel Orientation="Horizontal">
+                                <Button Width="170"
+                                        Content="{Binding ServerButtonText}"
+                                        Click="ToggleServerButton_Click" />
+                                <Button Width="170"
+                                        Content="Очистить логи"
+                                        Click="ClearLogsButton_Click"
+                                        Background="#FF7A8CA2"
+                                        BorderBrush="#FF7A8CA2" />
+                            </StackPanel>
+
+                            <TextBlock FontWeight="SemiBold" Text="Состояние" />
+                            <TextBlock Margin="0,6,0,6"
+                                       Text="{Binding ServerStatusText}" />
+                            <TextBlock Margin="0,0,0,6"
+                                       Text="{Binding UptimeText}" />
+                            <TextBlock Text="{Binding LogFilePathText}" />
+                        </StackPanel>
+                    </GroupBox>
+
+                    <GroupBox Header="HTTP-клиент">
+                        <StackPanel>
+                            <TextBlock Text="URL" />
+                            <TextBox Text="{Binding ClientUrl, UpdateSourceTrigger=PropertyChanged}" />
+
+                            <TextBlock Text="Метод" />
+                            <ComboBox ItemsSource="{Binding HttpMethods}"
+                                      SelectedItem="{Binding SelectedClientMethod}" />
+
+                            <TextBlock Text="JSON-тело запроса" />
+                            <TextBox Height="130"
+                                     AcceptsReturn="True"
+                                     VerticalScrollBarVisibility="Auto"
+                                     TextWrapping="Wrap"
+                                     Text="{Binding ClientRequestBody, UpdateSourceTrigger=PropertyChanged}" />
+
+                            <Button Content="Отправить запрос"
+                                    Width="170"
+                                    Click="SendRequestButton_Click" />
+
+                            <TextBlock FontWeight="SemiBold" Text="Ответ" />
+                            <TextBox Height="220"
+                                     IsReadOnly="True"
+                                     AcceptsReturn="True"
+                                     VerticalScrollBarVisibility="Auto"
+                                     TextWrapping="Wrap"
+                                     Text="{Binding ClientResponseText}" />
+                        </StackPanel>
+                    </GroupBox>
+
+                    <GroupBox Header="Сообщения, полученные сервером">
+                        <DataGrid ItemsSource="{Binding ReceivedMessages}">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Id" Binding="{Binding Id}" Width="110" />
+                                <DataGridTextColumn Header="Время" Binding="{Binding CreatedAtDisplay}" Width="150" />
+                                <DataGridTextColumn Header="Сообщение" Binding="{Binding Message}" Width="*" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </GroupBox>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2">
+                    <GroupBox Header="Статистика и аналитика">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="360" />
+                                <ColumnDefinition Width="16" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <DataGrid Grid.Column="0"
+                                      Height="250"
+                                      ItemsSource="{Binding StatisticRows}">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Показатель" Binding="{Binding Name}" Width="190" />
+                                    <DataGridTextColumn Header="Значение" Binding="{Binding Value}" Width="*" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+
+                            <Border Grid.Column="2"
+                                    Padding="12"
+                                    BorderBrush="#FFE0E6ED"
+                                    BorderThickness="1"
+                                    CornerRadius="10"
+                                    Background="#FFF9FBFD">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock VerticalAlignment="Center"
+                                                   FontWeight="SemiBold"
+                                                   Text="График нагрузки" />
+                                        <ComboBox Width="180"
+                                                  Margin="16,0,0,12"
+                                                  ItemsSource="{Binding ChartModes}"
+                                                  SelectedItem="{Binding SelectedChartMode}" />
+                                    </StackPanel>
+
+                                    <ItemsControl ItemsSource="{Binding ChartPoints}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Margin="6"
+                                                            VerticalAlignment="Bottom">
+                                                    <Border Width="54"
+                                                            Height="180"
+                                                            Background="#FFF0F5F9"
+                                                            BorderBrush="#FFD5E0E8"
+                                                            BorderThickness="1"
+                                                            CornerRadius="8"
+                                                            VerticalAlignment="Bottom">
+                                                        <Grid VerticalAlignment="Bottom">
+                                                            <Border Width="30"
+                                                                    Height="{Binding Height}"
+                                                                    Margin="0,0,0,8"
+                                                                    Background="#FF14A0C7"
+                                                                    CornerRadius="6"
+                                                                    VerticalAlignment="Bottom"
+                                                                    HorizontalAlignment="Center" />
+                                                        </Grid>
+                                                    </Border>
+                                                    <TextBlock Margin="0,6,0,0"
+                                                               HorizontalAlignment="Center"
+                                                               FontWeight="SemiBold"
+                                                               Text="{Binding Count}" />
+                                                    <TextBlock Width="70"
+                                                               TextAlignment="Center"
+                                                               TextWrapping="Wrap"
+                                                               FontSize="11"
+                                                               Text="{Binding Label}" />
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </GroupBox>
+
+                    <GroupBox Header="Фильтрация логов">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <StackPanel Width="220">
+                                    <TextBlock Text="Метод" />
+                                    <ComboBox ItemsSource="{Binding LogMethodFilters}"
+                                              SelectedItem="{Binding SelectedLogMethodFilter}" />
+                                </StackPanel>
+                                <StackPanel Width="220" Margin="16,0,0,0">
+                                    <TextBlock Text="Статус" />
+                                    <ComboBox ItemsSource="{Binding LogStatusFilters}"
+                                              SelectedItem="{Binding SelectedLogStatusFilter}" />
+                                </StackPanel>
+                                <Button Width="180"
+                                        Margin="16,22,0,0"
+                                        Content="Применить фильтр"
+                                        Click="ApplyFilterButton_Click" />
+                            </StackPanel>
+
+                            <DataGrid Height="260"
+                                      ItemsSource="{Binding FilteredLogs}">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Время" Binding="{Binding TimestampDisplay}" Width="150" />
+                                    <DataGridTextColumn Header="Источник" Binding="{Binding Direction}" Width="95" />
+                                    <DataGridTextColumn Header="Метод" Binding="{Binding Method}" Width="90" />
+                                    <DataGridTextColumn Header="Статус" Binding="{Binding StatusCode}" Width="90" />
+                                    <DataGridTextColumn Header="URL" Binding="{Binding Url}" Width="*" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </StackPanel>
+                    </GroupBox>
+
+                    <GroupBox Header="Текстовый лог">
+                        <TextBox Height="260"
+                                 IsReadOnly="True"
+                                 AcceptsReturn="True"
+                                 VerticalScrollBarVisibility="Auto"
+                                 HorizontalScrollBarVisibility="Auto"
+                                 TextWrapping="Wrap"
+                                 Text="{Binding LogText}" />
+                    </GroupBox>
+                </StackPanel>
+            </Grid>
+        </ScrollViewer>
+    </DockPanel>
+</Window>
