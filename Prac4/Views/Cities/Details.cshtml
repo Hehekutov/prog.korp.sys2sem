@@ -1,0 +1,73 @@
+@model City
+
+@{
+    ViewData["Title"] = Model.Name;
+}
+
+<section class="detail-hero" style="--accent:@Model.AccentColor">
+    <div class="detail-hero__text">
+        <a class="back-link" asp-controller="Cities" asp-action="Index">Все города</a>
+        <h1>@Model.Name</h1>
+        <p>@Model.HeroCaption</p>
+        <dl class="facts facts--wide">
+            <div>
+                <dt>Регион</dt>
+                <dd>@Model.Region</dd>
+            </div>
+            <div>
+                <dt>Население</dt>
+                <dd>@Model.Population.ToString("N0")</dd>
+            </div>
+            <div>
+                <dt>Климат</dt>
+                <dd>@Model.Climate</dd>
+            </div>
+        </dl>
+    </div>
+    <div class="detail-hero__image">
+        <img src="@Model.ImagePath" alt="@Model.Name" />
+        <img class="coat" src="@Model.CoatOfArmsPath" alt="Герб города @Model.Name" />
+        <a class="photo-source photo-source--overlay" href="@Model.PhotoSourceUrl" target="_blank" rel="noopener noreferrer">
+            Источник фото
+        </a>
+        <a class="photo-source photo-source--coat" href="@Model.CoatOfArmsSourceUrl" target="_blank" rel="noopener noreferrer">
+            Герб
+        </a>
+    </div>
+</section>
+
+<section class="content-band">
+    <div class="text-column">
+        <h2>История города</h2>
+        <p>@Model.History</p>
+    </div>
+</section>
+
+<section class="attraction-section">
+    <div class="section-heading">
+        <h2>Достопримечательности</h2>
+        <p>Выберите место, чтобы посмотреть историю, часы работы и стоимость посещения.</p>
+    </div>
+
+    <div class="attraction-grid">
+        @foreach (var attraction in Model.Attractions)
+        {
+            <article class="attraction-card">
+                <a asp-controller="Attractions" asp-action="Details" asp-route-id="@attraction.Id">
+                    <img src="@attraction.ImagePath" alt="@attraction.Name" />
+                </a>
+                <div>
+                    <h3>@attraction.Name</h3>
+                    <p>@attraction.ShortDescription</p>
+                    <p class="attraction-card__address">@attraction.Address</p>
+                <a class="text-link" asp-controller="Attractions" asp-action="Details" asp-route-id="@attraction.Id">
+                    Открыть карточку
+                </a>
+                <a class="photo-source" href="@attraction.PhotoSourceUrl" target="_blank" rel="noopener noreferrer">
+                    Источник фото
+                </a>
+            </div>
+        </article>
+    }
+    </div>
+</section>
