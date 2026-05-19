@@ -1,0 +1,40 @@
+@model Attraction
+
+@{
+    ViewData["Title"] = Model.Name;
+}
+
+<section class="place-detail">
+    <div class="place-detail__media">
+        <img src="@Model.ImagePath" alt="@Model.Name" />
+        <a class="photo-source photo-source--overlay" href="@Model.PhotoSourceUrl" target="_blank" rel="noopener noreferrer">
+            Источник фото
+        </a>
+    </div>
+    <div class="place-detail__content">
+        <a class="back-link" asp-controller="Cities" asp-action="Details" asp-route-id="@Model.CityId">
+            @Model.City?.Name
+        </a>
+        <h1>@Model.Name</h1>
+        <p class="lead">@Model.ShortDescription</p>
+        <dl class="visit-info">
+            <div>
+                <dt>Адрес</dt>
+                <dd>@Model.Address</dd>
+            </div>
+            <div>
+                <dt>Часы работы</dt>
+                <dd>@Model.OpeningHours</dd>
+            </div>
+            <div>
+                <dt>Стоимость</dt>
+                <dd>@Model.TicketPrice</dd>
+            </div>
+        </dl>
+        <a class="map-link" href="@Model.MapUrl" target="_blank" rel="noopener noreferrer">
+            Открыть на Яндекс Картах
+        </a>
+        <h2>История</h2>
+        <p>@Model.History</p>
+    </div>
+</section>

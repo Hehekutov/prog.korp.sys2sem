@@ -24,7 +24,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private string _serverStatusText = "Сервер остановлен";
     private string _clientUrl = "https://jsonplaceholder.typicode.com/posts";
     private string _selectedClientMethod = "GET";
-    private string _clientRequestBody = "{\n  \"message\": \"Привет от клиента\"\n}";
+    private string _clientRequestBody = "{\n  \"message\": \"Привет от Дениски\"\n}";
     private string _clientResponseText = "Здесь будет отображаться ответ сервера.";
     private string _logText = string.Empty;
     private string _uptimeText = "Время работы: 00:00:00";
