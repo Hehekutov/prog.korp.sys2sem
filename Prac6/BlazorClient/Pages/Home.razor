@@ -1,0 +1,253 @@
+@page "/"
+@inject HttpClient Http
+@inject IJSRuntime Js
+
+<PageTitle>Товары</PageTitle>
+
+<section class="toolbar">
+    <div>
+        <p class="eyebrow">Интернет-магазин</p>
+        <h1>Управление товарами</h1>
+    </div>
+    <button class="theme-toggle" type="button" @onclick="ToggleTheme">
+        @(isDarkTheme ? "Светлая тема" : "Темная тема")
+    </button>
+</section>
+
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <div class="alert @messageClass" role="alert">@message</div>
+}
+
+<section class="dashboard-grid">
+    <div class="panel product-list">
+        <div class="panel-heading">
+            <div>
+                <h2>Список товаров</h2>
+                <span>@products.Count товар(ов) в базе данных</span>
+            </div>
+        </div>
+
+        @if (isLoading)
+        {
+            <div class="loading-state">Загрузка товаров...</div>
+        }
+        else if (products.Count == 0)
+        {
+            <div class="empty-state">Товаров пока нет. Добавьте первый товар через форму справа.</div>
+        }
+        else
+        {
+            <div class="table-wrap">
+                <table class="products-table">
+                    <thead>
+                        <tr>
+                            <th>Название</th>
+                            <th>Категория</th>
+                            <th>Цена</th>
+                            <th>Остаток</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var product in products)
+                        {
+                            <tr class="@(editingProduct.Id == product.Id ? "selected-row" : null)">
+                                <td>
+                                    <strong>@product.Name</strong>
+                                    <span>@product.Description</span>
+                                </td>
+                                <td>@product.Category</td>
+                                <td>@product.Price.ToString("N2") ₽</td>
+                                <td>
+                                    <span class="@GetStockClass(product.Quantity)">@product.Quantity шт.</span>
+                                </td>
+                                <td class="actions">
+                                    <button class="btn btn-outline-secondary btn-sm" type="button" @onclick="() => Edit(product)">Изменить</button>
+                                    <button class="btn btn-outline-danger btn-sm" type="button" @onclick="() => Delete(product)">Удалить</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+    <div class="panel editor-panel">
+        <div class="panel-heading compact">
+            <div>
+                <h2>@(editingProduct.Id == 0 ? "Новый товар" : "Изменение товара")</h2>
+                <span>Данные сохраняются через API в SQLite</span>
+            </div>
+        </div>
+
+        <EditForm Model="editingProduct" OnValidSubmit="Save">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <label>
+                Название
+                <InputText class="form-control" @bind-Value="editingProduct.Name" />
+            </label>
+
+            <label>
+                Категория
+                <InputText class="form-control" @bind-Value="editingProduct.Category" />
+            </label>
+
+            <div class="form-row">
+                <label>
+                    Цена
+                    <InputNumber class="form-control" @bind-Value="editingProduct.Price" />
+                </label>
+                <label>
+                    Количество
+                    <InputNumber class="form-control" @bind-Value="editingProduct.Quantity" />
+                </label>
+            </div>
+
+            <label>
+                Описание
+                <InputTextArea class="form-control textarea" @bind-Value="editingProduct.Description" />
+            </label>
+
+            <div class="form-actions">
+                <button class="btn btn-primary" type="submit" disabled="@isSaving">
+                    @(isSaving ? "Сохранение..." : "Сохранить")
+                </button>
+                <button class="btn btn-outline-secondary" type="button" @onclick="CreateNew">Очистить</button>
+            </div>
+        </EditForm>
+    </div>
+</section>
+
+@code {
+    private List<Product> products = [];
+    private Product editingProduct = new();
+    private bool isLoading = true;
+    private bool isSaving;
+    private bool isDarkTheme;
+    private string? message;
+    private string messageClass = "alert-success";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProducts();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        var theme = await Js.InvokeAsync<string>("prac6Theme.read");
+        isDarkTheme = theme == "dark";
+        await Js.InvokeVoidAsync("prac6Theme.apply", isDarkTheme ? "dark" : "light");
+        StateHasChanged();
+    }
+
+    private async Task LoadProducts()
+    {
+        isLoading = true;
+        products = await Http.GetFromJsonAsync<List<Product>>("api/products") ?? [];
+        isLoading = false;
+    }
+
+    private void CreateNew()
+    {
+        editingProduct = new Product();
+        ClearMessage();
+    }
+
+    private void Edit(Product product)
+    {
+        editingProduct = new Product
+        {
+            Id = product.Id,
+            Name = product.Name,
+            Category = product.Category,
+            Price = product.Price,
+            Quantity = product.Quantity,
+            Description = product.Description
+        };
+        ClearMessage();
+    }
+
+    private async Task Save()
+    {
+        isSaving = true;
+        HttpResponseMessage response;
+
+        if (editingProduct.Id == 0)
+        {
+            response = await Http.PostAsJsonAsync("api/products", editingProduct);
+        }
+        else
+        {
+            response = await Http.PutAsJsonAsync($"api/products/{editingProduct.Id}", editingProduct);
+        }
+
+        isSaving = false;
+
+        if (!response.IsSuccessStatusCode)
+        {
+            ShowMessage("Не удалось сохранить товар. Проверьте введенные данные.", "alert-danger");
+            return;
+        }
+
+        await LoadProducts();
+        CreateNew();
+        ShowMessage("Товар сохранен.", "alert-success");
+    }
+
+    private async Task Delete(Product product)
+    {
+        var confirmed = await Js.InvokeAsync<bool>("confirm", $"Удалить товар \"{product.Name}\"?");
+        if (!confirmed)
+        {
+            return;
+        }
+
+        var response = await Http.DeleteAsync($"api/products/{product.Id}");
+        if (!response.IsSuccessStatusCode)
+        {
+            ShowMessage("Не удалось удалить товар.", "alert-danger");
+            return;
+        }
+
+        await LoadProducts();
+        if (editingProduct.Id == product.Id)
+        {
+            CreateNew();
+        }
+        ShowMessage("Товар удален.", "alert-success");
+    }
+
+    private async Task ToggleTheme()
+    {
+        isDarkTheme = !isDarkTheme;
+        await Js.InvokeVoidAsync("prac6Theme.apply", isDarkTheme ? "dark" : "light");
+    }
+
+    private static string GetStockClass(int quantity) =>
+        quantity switch
+        {
+            <= 3 => "stock stock-low",
+            <= 10 => "stock stock-mid",
+            _ => "stock stock-ok"
+        };
+
+    private void ShowMessage(string text, string cssClass)
+    {
+        message = text;
+        messageClass = cssClass;
+    }
+
+    private void ClearMessage()
+    {
+        message = null;
+    }
+}
